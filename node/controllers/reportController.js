@@ -4,34 +4,30 @@ const { Op } = require("sequelize");
 exports.getDailyReport = async (req, res) => {
   try {
     const { nama, tanggalMulai, tanggalSelesai } = req.query;
-    let options = { where: {} };
+    const where = {};
 
-    // Filter berdasarkan nama (jika ada)
     if (nama) {
-      options.where.nama = {
-        [Op.like]: `%${nama}%`,
-      };
+      where.nama = { [Op.like]: `%${nama}%` };
     }
 
-    // Filter berdasarkan rentang tanggal (jika dua-duanya dikirim)
     if (tanggalMulai && tanggalSelesai) {
-      options.where.tanggal = {
-        [Op.between]: [tanggalMulai, tanggalSelesai],
-      };
+      // ubah agar bisa cari sepanjang hari, bukan jam exact
+      const start = new Date(`${tanggalMulai} 00:00:00`);
+      const end = new Date(`${tanggalSelesai} 23:59:59`);
+      where.checkIn = { [Op.between]: [start, end] };
     }
 
-    // Ambil data dari database sesuai filter
-    const records = await Presensi.findAll(options);
+    const records = await Presensi.findAll({ where });
 
     res.json({
-      reportDate: new Date().toLocaleDateString(),
-      filter: { nama, tanggalMulai, tanggalSelesai },
+      message: "Laporan harian berhasil diambil",
+      reportDate: new Date().toLocaleDateString("id-ID"),
+      total: records.length,
       data: records,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Gagal mengambil laporan",
-      error: error.message,
-    });
+    res
+      .status(500)
+      .json({ message: "Gagal mengambil laporan", error: error.message });
   }
 };

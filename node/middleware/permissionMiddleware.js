@@ -1,19 +1,16 @@
- 	exports.addUserData = (req, res, next) => {
- 	  console.log('Middleware: Menambahkan data user dummy...');
- 	  req.user = {
- 	    id: 123,
- 	    nama: 'Asyiraaf',
- 	    role: 'admin'
- 	  };
- 	  next(); 
- 	};
+exports.addUserData = (req, res, next) => {
+  // Dummy user, bisa dihapus jika kamu pakai auth asli
+  req.user = { id: 1, nama: "Default User" };
+  next();
+};
+
  	
- 	exports.isAdmin = (req, res, next) => {
- 	  if (req.user && req.user.role === 'admin') {
+exports.isAdmin = (req, res, next) => {
+	if (req.user && req.user.role === 'admin') {
  	    console.log('Middleware: Izin admin diberikan.');
  	    next(); 
- 	  } else {
+ 	} else {
  	    console.log('Middleware: Gagal! Pengguna bukan admin.');
  	    return res.status(403).json({ message: 'Akses ditolak: Hanya untuk admin'});
- 	  }
- 	};
+ 	}
+};
