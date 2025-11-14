@@ -33,12 +33,18 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10); // 10 adalah salt rounds
 
     // 4. Buat user baru di database
-    const newUser = await User.create({
-      nama,
-      email,
-      password: hashedPassword,
-      role: role || "mahasiswa", // Jika role tidak dikirim, default ke 'mahasiswa'
-    });
+    let newUser;
+    try {
+      newUser = await User.create({
+        nama,
+        email,
+        password: hashedPassword,
+        role: role || "mahasiswa",
+      });
+    } catch (err) {
+      console.log("ERROR SAAT INSERT USER:", err);   // <--- pasti tampil
+      return res.status(500).json({ message: "DB Error", error: err.message });
+    }
 
     res.status(201).json({
       message: "Registrasi berhasil",
