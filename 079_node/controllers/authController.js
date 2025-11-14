@@ -89,8 +89,15 @@ exports.login = async (req, res) => {
       token: token, // Kirim token ke klien
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+    console.error("REGISTER ERROR:", error); // <--- WAJIB TAMBAHKAN INI
+
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: "Email sudah terdaftar." });
+    }
+
+    res.status(500).json({ 
+      message: "Terjadi kesalahan pada server", 
+      error: error.message 
+    });
   }
 };
