@@ -1,63 +1,90 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { Presensi, User } = require('../models'); 
-const { authenticateToken } = require('../middleware/permissionMiddleware');
-const { checkInOncePerDay } = require('../middleware/checkinLimit');
+const { Presensi, User } = require("../models");
+const { authenticateToken } = require("../middleware/permissionMiddleware");
+const { checkInOncePerDay } = require("../middleware/checkinLimit");
 
-router.post('/checkin', authenticateToken, checkInOncePerDay, async (req, res) => {
-
-
-router.post('/checkin', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id; 
-    
-    const newPresensi = await Presensi.create({
-      userId: userId,
-      status: 'masuk',
-      waktu: new Date()
-    });
-
-    res.status(201).json({ 
-      message: "Check-in berhasil", 
-      data: newPresensi 
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Terjadi kesalahan server", error: error.message });
-  }
-});
-
-router.post('/checkout', authenticateToken, async (req, res) => {
+// ======================
+// CHECK-IN
+// ======================
+router.post("/checkin", authenticateToken, checkInOncePerDay, async (req, res) => {
   try {
     const userId = req.user.id;
 
     const newPresensi = await Presensi.create({
       userId: userId,
-      status: 'pulang',
-      waktu: new Date()
+      status: "masuk",
+      waktu: new Date(),
     });
 
-    res.status(201).json({ 
-      message: "Check-out berhasil", 
-      data: newPresensi 
+    return res.status(201).json({
+      status: "success",
+      message: "Check-in berhasil",
+      data: newPresensi,
     });
   } catch (error) {
-    res.status(500).json({ message: "Terjadi kesalahan server", error: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Terjadi kesalahan pada server",
+      error: error.message,
+    });
   }
 });
 
-router.get('/', authenticateToken, async (req, res) => {
+// ======================
+// CHECK-OUT
+// ======================
+router.post("/checkout", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const newPresensi = await Presensi.create({
+      userId: userId,
+      status: "pulang",
+      waktu: new Date(),
+    });
+
+    return res.status(201).json({
+      status: "success",
+      message: "Check-out berhasil",
+      data: newPresensi,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Terjadi kesalahan pada server",
+      error: error.message,
+    });
+  }
+});
+
+// ======================
+// GET ALL PRESENSI
+// ======================
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const history = await Presensi.findAll({
-      include: [{
-        model: User,
-        as: 'userData',
-        attributes: ['username', 'email']
-      }]
+      include: [
+        {
+          model: User,
+          as: "userData",
+          attributes: ["username", "email"],
+        },
+      ],
     });
-    res.json(history);
+
+    return res.json({
+      status: "success",
+      message: "Berhasil mengambil semua data presensi",
+      data: history,
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Terjadi kesalahan server",
+      error: error.message,
+    });
   }
 });
-})
+
 module.exports = router;

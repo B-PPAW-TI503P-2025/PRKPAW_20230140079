@@ -1,74 +1,42 @@
-const express = require('express');
-const router = express.Router();
-const { Presensi, User } = require('../models'); 
-const { authenticateToken } = require('../middleware/permissionMiddleware');
+'use strict';
+const { Model } = require('sequelize');
 
-// CHECK-IN
-router.post('/checkin', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const newPresensi = await Presensi.create({
-      userId,
-      status: 'masuk',
-      waktu: new Date()
-    });
-
-    res.status(201).json({ 
-      message: "Check-in berhasil", 
-      data: newPresensi 
-    });
-
-  } catch (error) {
-    res.status(500).json({ 
-      message: "Terjadi kesalahan server", 
-      error: error.message 
-    });
+module.exports = (sequelize, DataTypes) => {
+  class Presensi extends Model {
+    static associate(models) {
+      // Relasi ke User
+      Presensi.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'userData'
+      });
+    }
   }
-});
 
-// CHECK-OUT
-router.post('/checkout', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
+  Presensi.init(
+    {
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id'
+        }
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
+      waktu: {
+        type: DataTypes.DATE,
+        allowNull: false
+      }
+    },
+    {
+      sequelize,
+      modelName: 'Presensi',
+      tableName: 'Presensis' // pastikan sesuai database
+    }
+  );
 
-    const newPresensi = await Presensi.create({
-      userId,
-      status: 'pulang',
-      waktu: new Date()
-    });
-
-    res.status(201).json({ 
-      message: "Check-out berhasil", 
-      data: newPresensi 
-    });
-
-  } catch (error) {
-    res.status(500).json({ 
-      message: "Terjadi kesalahan server", 
-      error: error.message 
-    });
-  }
-});
-
-// RIWAYAT PRESENSI
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const history = await Presensi.findAll({
-      include: [{
-        model: User,
-        as: 'userData',
-        attributes: ['username', 'email']
-      }]
-    });
-
-    res.json(history);
-
-  } catch (error) {
-    res.status(500).json({ 
-      error: error.message 
-    });
-  }
-});
-
-module.exports = router;
+  return Presensi;
+};

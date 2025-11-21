@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Navbar from '/navbar'; // Pastikan import path benar (sesama folder components)
+import Navbar from "./Navbar";
 import API from '../api'; // Import konfigurasi Axios
 
 function DashboardPage() {

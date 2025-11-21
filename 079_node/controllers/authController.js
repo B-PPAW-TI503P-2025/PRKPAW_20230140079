@@ -1,109 +1,56 @@
-console.log(
-  "Nilai JWT_SECRET di authController.js (atas):",
-  process.env.JWT_SECRET
-);
-
+// controllers/authController.js
 const { User } = require("../models");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Tentukan Kunci Rahasia Anda di sini (Simpan di .env di aplikasi nyata)
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "kunci_rahasia_dev";
 
-// --- FUNGSI REGISTRASI ---
 exports.register = async (req, res) => {
   try {
-    const { nama, email, password, role } = req.body;
-
-    // 1. Validasi input dasar
-    if (!nama || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Nama, email, dan password harus diisi" });
+    const { username, email, password, role = "user" } = req.body;
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "Lengkapi semua field" });
     }
 
-    // 2. Validasi role (jika dikirim, jika tidak akan pakai default 'mahasiswa')
-    if (role && !["mahasiswa", "admin"].includes(role)) {
-      return res
-        .status(400)
-        .json({ message: "Role tidak valid. Harus 'mahasiswa' atau 'admin'." });
+    const existing = await User.findOne({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ message: "Email sudah terdaftar" });
     }
 
-    // 3. Hash password menggunakan bcrypt
-    const hashedPassword = await bcrypt.hash(password, 10); // 10 adalah salt rounds
+    const hashed = await bcrypt.hash(password, 10);
 
-    // 4. Buat user baru di database
-    let newUser;
-    try {
-      newUser = await User.create({
-        nama,
-        email,
-        password: hashedPassword,
-        role: role || "mahasiswa",
-      });
-    } catch (err) {
-      console.log("ERROR SAAT INSERT USER:", err);   // <--- pasti tampil
-      return res.status(500).json({ message: "DB Error", error: err.message });
-    }
-
-    res.status(201).json({
-      message: "Registrasi berhasil",
-      data: { id: newUser.id, email: newUser.email, role: newUser.role },
+    const user = await User.create({
+      username,
+      email,
+      password: hashed,
+      role,
     });
-  } catch (error) {
-    // 5. Tangani error jika email sudah terdaftar (karena 'unique: true')
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(400).json({ message: "Email sudah terdaftar." });
-    }
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+
+    return res.status(201).json({ success: true, message: "Registrasi berhasil", data: { id: user.id, email: user.email } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// --- FUNGSI LOGIN ---
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Email & password dibutuhkan" });
 
-    // 1. Cari user berdasarkan email
     const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ message: "Email tidak ditemukan." });
-    }
+    if (!user) return res.status(401).json({ message: "Email atau password salah" });
 
-    // 2. Bandingkan password yang dimasukkan dengan hash di database
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Password salah." });
-    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ message: "Email atau password salah" });
 
-    // 3. Buat Payload (data) untuk JWT
-    const payload = {
-      id: user.id,
-      nama: user.nama,
-      role: user.role, // Masukkan role ke dalam token
-    };
+    // payload: id, username, role
+    const payload = { id: user.id, username: user.username, role: user.role };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "8h" });
 
-    // 4. Buat dan tandatangani JWT
-    const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: "1h", // Token akan kedaluwarsa dalam 1 jam
-    });
-
-    res.json({
-      message: "Login berhasil",
-      token: token, // Kirim token ke klien
-    });
-  } catch (error) {
-    console.error("REGISTER ERROR:", error); // <--- WAJIB TAMBAHKAN INI
-
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(400).json({ message: "Email sudah terdaftar." });
-    }
-
-    res.status(500).json({ 
-      message: "Terjadi kesalahan pada server", 
-      error: error.message 
-    });
+    return res.json({ success: true, message: "Login berhasil", token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

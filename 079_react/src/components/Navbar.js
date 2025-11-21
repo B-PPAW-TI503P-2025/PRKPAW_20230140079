@@ -1,63 +1,47 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 function Navbar() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const token = localStorage.getItem("token");
+  let user = null;
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) return;
-
+  if (token) {
     try {
-      const decoded = jwtDecode(token);
-      setUser(decoded);
+      user = jwtDecode(token);
     } catch (err) {
-      console.error("Token invalid");
       localStorage.removeItem("token");
-      navigate("/login");
     }
-  }, [navigate]);
+  }
 
-  const handleLogout = () => {
+  const logout = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
 
   return (
-    <nav className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between shadow-md">
-      <div className="flex items-center space-x-6">
-        <Link to="/dashboard" className="hover:text-gray-300 font-medium">
-          Dashboard
-        </Link>
-
-        <Link to="/presensi" className="hover:text-gray-300 font-medium">
-          Presensi
-        </Link>
-
-        {user?.role === "admin" && (
-          <Link to="/reports" className="hover:text-gray-300 font-medium">
-            Laporan Admin
-          </Link>
+    <nav className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center">
+      <div className="flex gap-6">
+        {user ? (
+          <>
+            <Link to="/dashboard">Dashboard</Link>
+            <Link to="/presensi">Presensi</Link>
+            {user.role === "admin" && <Link to="/reports">Laporan Admin</Link>}
+          </>
+        ) : (
+          <Link to="/login">Login</Link>
         )}
       </div>
 
-      <div className="flex items-center space-x-4">
-        {user && (
-          <span className="text-gray-300">
-            Halo, <span className="font-semibold">{user.nama}</span>
-          </span>
-        )}
-
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 font-semibold"
-        >
-          Logout
-        </button>
-      </div>
+      {user && (
+        <div>
+          <span className="mr-4">Halo, {user.username}</span>
+          <button onClick={logout} className="bg-red-600 px-3 py-1 rounded">
+            Logout
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
