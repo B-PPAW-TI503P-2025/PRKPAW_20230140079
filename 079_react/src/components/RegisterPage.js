@@ -1,130 +1,122 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { UserPlus, User, Mail, Lock, ArrowRight } from "lucide-react";
 
-function RegisterPage() {
+const RegisterPage = () => {
+  const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [nama, setNama] = useState("");
-  const [role, setRole] = useState("mahasiswa");
-
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setError(null);
-
+    setLoading(true);
     try {
       await axios.post("http://localhost:3001/api/auth/register", {
-        nama: nama,
-        email: email,
-        password: password,
-        role: role,
+        nama,
+        email,
+        password,
       });
-
+      alert("Registrasi Berhasil! Silakan Login.");
       navigate("/login");
-    } catch (err) {
-      setError(err.response ? err.response.data.message : "Registrasi gagal");
+    } catch (error) {
+      alert("Registrasi Gagal: " + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Buat Akun Baru
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              htmlFor="nama"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Nama Lengkap:
-            </label>
-            <input
-              id="nama"
-              type="text"
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
-              required
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-orange-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-white">
+        
+        {/* HEADER */}
+        <div className="bg-gradient-to-r from-pink-500 to-orange-400 p-10 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+          <div className="relative z-10">
+            <div className="bg-white/20 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 backdrop-blur-sm shadow-inner">
+               <UserPlus className="text-white" size={32} />
+            </div>
+            <h2 className="text-3xl font-extrabold text-white tracking-wide">BUAT AKUN</h2>
+            <p className="text-pink-100 font-medium mt-2">Gabung bersama kami sekarang</p>
           </div>
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email:
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password:
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+        </div>
 
-          <div>
-            <label
-              htmlFor="role"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Daftar sebagai:
-            </label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="mahasiswa">Mahasiswa</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
+        {/* FORM */}
+        <div className="p-8">
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div>
+              <label className="block text-gray-700 font-bold mb-2 ml-1">Nama Lengkap</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="text-gray-400" size={20} />
+                </div>
+                <input
+                  type="text"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-pink-100 focus:border-pink-400 outline-none transition-all font-medium"
+                  placeholder="John Doe"
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700"
-          >
-            Register
-          </button>
-        </form>
-        {error && (
-          <p className="text-red-600 text-sm mt-4 text-center">{error}</p>
-        )}
+            <div>
+              <label className="block text-gray-700 font-bold mb-2 ml-1">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="text-gray-400" size={20} />
+                </div>
+                <input
+                  type="email"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 outline-none transition-all font-medium"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Sudah punya akun?{" "}
-          <Link
-            to="/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
-          >
-            Login di sini
-          </Link>
-        </p>
+            <div>
+              <label className="block text-gray-700 font-bold mb-2 ml-1">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="text-gray-400" size={20} />
+                </div>
+                <input
+                  type="password"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-pink-100 focus:border-pink-400 outline-none transition-all font-medium"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-pink-200 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 mt-4"
+            >
+              {loading ? "Loading..." : <>DAFTAR <ArrowRight size={20} /></>}
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-gray-500 font-medium">
+            Sudah punya akun?{" "}
+            <Link to="/login" className="text-orange-500 font-bold hover:underline">
+              Login Disini
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
-}
+};
+
 export default RegisterPage;
