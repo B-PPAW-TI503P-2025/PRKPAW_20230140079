@@ -1,64 +1,33 @@
-import React, { useState } from 'react';
-import Navbar from "./Navbar";
-import API from '../api'; // Import konfigurasi Axios
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 function DashboardPage() {
-  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
-  // Fungsi untuk menangani Check-in dan Check-out
-  const handlePresensi = async (type) => {
-    try {
-      const endpoint = type === 'in' ? '/presensi/checkin' : '/presensi/checkout';
-      const response = await API.post(endpoint);
-      setMessage(`Sukses: ${response.data.message}`);
-    } catch (error) {
-      setMessage("Gagal: " + (error.response?.data?.message || "Terjadi kesalahan server"));
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token"); // Hapus token dari local storage
+    navigate("/login"); // Arahkan kembali ke halaman login
   };
 
   return (
-    // Gunakan Fragment (<>...</>) agar Navbar berada di luar container centering
-    <>
-      <Navbar />
-      
-      <div className="min-h-screen bg-blue-50 flex flex-col items-center p-10">
-        <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl text-center">
-          <h1 className="text-4xl font-bold text-blue-700 mb-4">
-            Dashboard Presensi
-          </h1>
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-8">
+      <div className="bg-white p-10 rounded-lg shadow-md text-center">
+        <h1 className="text-3xl font-bold text-green-600 mb-4">
+          Login Sukses!
+        </h1>
 
-          <p className="text-gray-700 mb-6">
-            Silakan lakukan absensi kehadiran Anda di bawah ini.
-          </p>
+        <p className="text-lg text-gray-700 mb-8">
+          Selamat Datang di Halaman Dashboard Anda.
+        </p>
 
-          {/* Menampilkan pesan status jika ada (Sukses/Gagal) */}
-          {message && (
-            <div className={`p-3 mb-4 rounded ${message.includes('Sukses') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {message}
-            </div>
-          )}
-
-          <div className="flex justify-center gap-4">
-            {/* Tombol Check In */}
-            <button
-              onClick={() => handlePresensi('in')}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition duration-200"
-            >
-              Check In (Masuk)
-            </button>
-
-            {/* Tombol Check Out */}
-            <button
-              onClick={() => handlePresensi('out')}
-              className="px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold shadow hover:bg-orange-600 transition duration-200"
-            >
-              Check Out (Pulang)
-            </button>
-          </div>
-
-        </div>
+        <button
+          onClick={handleLogout}
+          className="py-2 px-6 bg-red-500 text-white font-semibold rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          Logout
+        </button>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -1,47 +1,55 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function ReportPage() {
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  const fetchReports = async () => {
+  const fetchReports = async (query) => {
     const token = localStorage.getItem("token");
-    if (!token) return navigate("/login");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     try {
-      const params = {};
-      if (searchTerm) params.nama = searchTerm;
-      if (fromDate) params.from = fromDate;
-      if (toDate) params.to = toDate;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
 
-      const response = await axios.get(
-        "http://localhost:3001/api/reports/daily",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params,
-        }
-      );
+      const baseUrl = "http://localhost:3001/api/reports/daily";
+      const url = query ? `${baseUrl}?nama=${query}` : baseUrl;
 
-      setReports(response.data.data || []);
+      const response = await axios.get(url, config);
+      setReports(response.data.data);
       setError(null);
     } catch (err) {
-      setError("Gagal mengambil data laporan");
+      setReports([]);
+      setError(
+        err.response ? err.response.data.message : "Gagal mengambil data"
+      );
     }
   };
 
   useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const handleSearch = (e) => {
+    fetchReports("");
+  }, [navigate]);
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchReports();
+    fetchReports(searchTerm);
+  };
+
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    // Ganti backslash (\) jadi slash (/) jika ada (untuk support path Windows)
+    const cleanPath = path.replace(/\\/g, "/");
+    return `http://localhost:3001/${cleanPath}`;
   };
 
   return (
@@ -50,74 +58,128 @@ function ReportPage() {
         Laporan Presensi Harian
       </h1>
 
-      <form onSubmit={handleSearch} className="mb-6 space-y-2">
+      <form onSubmit={handleSearchSubmit} className="mb-6 flex space-x-2">
         <input
           type="text"
-          placeholder="Cari nama..."
-          className="w-full px-3 py-2 border rounded"
+          placeholder="Cari berdasarkan nama..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         />
-
-        <div className="flex space-x-2">
-          <input
-            type="date"
-            className="px-3 py-2 border rounded"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-          <input
-            type="date"
-            className="px-3 py-2 border rounded"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-          />
-        </div>
-
-        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <button
+          type="submit"
+          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700"
+        >
           Cari
         </button>
       </form>
 
       {error && (
-        <p className="text-red-600 bg-red-100 p-4 rounded mb-4">{error}</p>
+        <p className="text-red-600 bg-red-100 p-4 rounded-md mb-4">{error}</p>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Nama</th>
-              <th className="p-3 text-left">Check-In</th>
-              <th className="p-3 text-left">Check-Out</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {reports.length === 0 ? (
+      {!error && (
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan="3" className="p-4 text-center">
-                  Tidak ada data.
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nama
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Check-In
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Check-Out
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Latitude
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Longitude
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Bukti Foto
+                </th>
               </tr>
-            ) : (
-              reports.map((r) => (
-                <tr key={r.id} className="border-b">
-                  <td className="p-3">{r.user?.nama || "N/A"}</td>
-                  <td className="p-3">
-                    {new Date(r.checkIn).toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-3">
-                    {r.checkOut
-                      ? new Date(r.checkOut).toLocaleString("id-ID")
-                      : "Belum checkout"}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {reports.length > 0 ? (
+                reports.map((presensi) => (
+                  <tr key={presensi.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {presensi.user ? presensi.user.nama : "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(presensi.checkIn).toLocaleString("id-ID", {
+                        timeZone: "Asia/Jakarta",
+                      })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {presensi.checkOut
+                        ? new Date(presensi.checkOut).toLocaleString("id-ID", {
+                            timeZone: "Asia/Jakarta",
+                          })
+                        : "Belum Check-Out"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {presensi.latitude || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {presensi.longitude || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {presensi.buktiFoto ? (
+                        <img
+                          src={getImageUrl(presensi.buktiFoto)}
+                          alt="Bukti"
+                          className="h-10 w-10 rounded-full object-cover cursor-pointer border hover:border-blue-500"
+                          onClick={() =>
+                            setSelectedImage(getImageUrl(presensi.buktiFoto))
+                          }
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">Tidak ada</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="3"
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
+                    Tidak ada data yang ditemukan.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)} // Klik di luar foto untuk tutup
+        >
+          <div className="relative max-w-3xl w-full">
+            <button
+              className="absolute -top-10 right-0 text-white text-xl font-bold hover:text-gray-300"
+              onClick={() => setSelectedImage(null)}
+            >
+              Tutup [X]
+            </button>
+            <img
+              src={selectedImage}
+              alt="Bukti Full"
+              className="w-full h-auto rounded-lg shadow-2xl border-2 border-white"
+              onClick={(e) => e.stopPropagation()} // Mencegah klik foto menutup modal
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
