@@ -1,12 +1,41 @@
 const { Presensi, User } = require("../models");
 const { format } = require("date-fns-tz");
 const timeZone = "Asia/Jakarta";
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Simpan di folder uploads
+  },
+  filename: (req, file, cb) => {
+    // Format nama file: userId-timestamp.jpg
+    cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+// Filter hanya gambar
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Hanya file gambar yang diperbolehkan!"), false);
+  }
+};
+
+// Inisialisasi upload middleware
+exports.upload = multer({ storage: storage, fileFilter: fileFilter });
 
 exports.CheckIn = async (req, res) => {
   try {
-    // Ambil 'id' dan 'nama' dari TOKEN (req.user), bukan dari body
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
+
+    const { latitude, longitude } = req.body;
+    const buktiFoto = req.file ? req.file.path : null;
+
+   
+
 
     const existingRecord = await Presensi.findOne({
       where: { userId: userId, checkOut: null },
@@ -17,12 +46,12 @@ exports.CheckIn = async (req, res) => {
         .status(400)
         .json({ message: "Anda sudah melakukan check-in hari ini." });
     }
-
-    // Buat data baru HANYA dengan userId
-    // Kita tidak perlu menyimpan 'nama' di tabel Presensis
     const newRecord = await Presensi.create({
-      userId: userId, // <-- Diambil dari token
+      userId: userId,
       checkIn: waktuSekarang,
+      latitude: latitude || null,
+      longitude: longitude || null,
+      buktiFoto: buktiFoto,
     });
 
     res.status(201).json({
@@ -58,14 +87,13 @@ exports.CheckOut = async (req, res) => {
     recordToUpdate.checkOut = waktuSekarang;
     await recordToUpdate.save();
 
-    // Kirim data yang sudah di-update
     res.json({
       message: `Selamat jalan ${userName}, check-out Anda berhasil pada pukul ${format(
         waktuSekarang,
         "HH:mm:ss",
         { timeZone }
       )} WIB`,
-      data: recordToUpdate, // Kirim data yang sudah di-update
+      data: recordToUpdate,
     });
   } catch (error) {
     res

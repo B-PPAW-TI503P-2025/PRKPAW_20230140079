@@ -22,6 +22,7 @@ exports.authenticateToken = (req, res, next) => {
   });
 };
 
+// Middleware 'isAdmin' sekarang akan memeriksa 'role' dari token
 exports.isAdmin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
     next();

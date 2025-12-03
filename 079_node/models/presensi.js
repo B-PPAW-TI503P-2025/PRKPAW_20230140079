@@ -1,42 +1,50 @@
-'use strict';
-const { Model } = require('sequelize');
-
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
     static associate(models) {
-      // Relasi ke User
       Presensi.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'userData'
+        foreignKey: "userId",
+        as: "user",
       });
     }
   }
-
   Presensi.init(
     {
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id'
-        }
       },
-      status: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      waktu: {
+      checkIn: {
         type: DataTypes.DATE,
-        allowNull: false
-      }
+        allowNull: false,
+      },
+      checkOut: {
+        type: DataTypes.DATE,
+        allowNull: true, // Boleh null
+      },
+      latitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: false,
+      },
+      longitude: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: false,
+      },
+      buktiFoto: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,
-      modelName: 'Presensi',
-      tableName: 'Presensis' // pastikan sesuai database
+      modelName: "Presensi",
     }
   );
-
   return Presensi;
 };

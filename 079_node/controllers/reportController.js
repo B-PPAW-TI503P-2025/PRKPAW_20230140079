@@ -1,22 +1,28 @@
-const { Presensi } = require("../models");
+const { Presensi, User } = require("../models");
 const { Op } = require("sequelize");
+
+const { format } = require("date-fns-tz");
 
 exports.getDailyReport = async (req, res) => {
   try {
     const { nama } = req.query;
-    const { tanggal } = req.params;
-    let options = { where: {} };
 
-    if (tanggal) {
-      options.where.createdAt = {
-        [Op.gte]: new Date(tanggal + " 00:00:00"),
-        [Op.lte]: new Date(tanggal + " 23:59:59"),
-      };
-    }
+    let options = {
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["nama"],
+        },
+      ],
+    };
 
     if (nama) {
-      options.where.nama = {
-        [Op.like]: `%${nama}%`,
+      // Baris ini akan error jika 'Op' tidak diimpor
+      options.include[0].where = {
+        nama: {
+          [Op.like]: `%${nama}%`,
+        },
       };
     }
 
@@ -24,7 +30,6 @@ exports.getDailyReport = async (req, res) => {
 
     res.json({
       reportDate: new Date().toLocaleDateString(),
-
       data: records,
     });
   } catch (error) {
