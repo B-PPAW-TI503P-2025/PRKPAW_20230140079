@@ -17,4 +17,4 @@
 ---
 
 ## 4. Screenshot tabel presensi di database
-![SS](../screenshots/dbtb.png)
+![SS](../screenshots/sstb.png)
