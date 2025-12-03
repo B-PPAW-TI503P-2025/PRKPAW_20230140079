@@ -48,6 +48,7 @@ function App() {
               </MainLayout>
             }
           />
+          <Route path="/report" element={<ReportPage />} />
           <Route path="/" element={<LoginPage />} />
         </Routes>
       </div>

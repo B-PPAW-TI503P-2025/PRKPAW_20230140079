@@ -1,204 +1,223 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
+import axios from "axios";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import icon from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import { Camera, MapPin, CheckCircle, LogOut } from "lucide-react";
 
-L.Marker.prototype.options.icon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconRetinaUrl: icon,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
+// Perbaikan Icon Leaflet agar tidak error (blank image) di React
+// Menggunakan try-catch agar aman jika dijalankan di environment berbeda
+try {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
+    iconUrl: require("leaflet/dist/images/marker-icon.png"),
+    shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  });
+} catch (e) {
+  console.warn("Leaflet icons setup failed (expected in some environments)", e);
+}
 
-function AttendancePage() {
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  const [coords, setCoords] = useState(null); // {lat, lng}
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [image, setImage] = useState(null); // State untuk menyimpan hasil foto
+const AttendancePage = () => {
+  const [location, setLocation] = useState(null);
+  const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
   const webcamRef = useRef(null);
 
-  const capture = useCallback(() => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setImage(imageSrc);
-  }, [webcamRef]);
-
-  const getToken = () => {
-    return localStorage.getItem("token");
-  };
-
-  const getLocation = () => {
+  // 1. Ambil Lokasi (Geolocation) saat halaman dibuka
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCoords({
+          setLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
-          setIsLoading(false);
         },
         (error) => {
-          setError("Gagal mendapatkan lokasi: " + error.message);
-          setIsLoading(false);
+          console.error("Error lokasi:", error);
+          alert("Mohon izinkan akses lokasi di browser untuk presensi.");
         }
       );
     } else {
-      setError("Geolocation tidak didukung oleh browser ini.");
-      setIsLoading(false);
+      alert("Browser tidak mendukung Geolocation.");
     }
-  };
-  useEffect(() => {
-    getLocation();
   }, []);
 
-  const handleCheckIn = async () => {
+  // 2. Fungsi Capture Foto
+  const capture = React.useCallback(() => {
+    if (webcamRef.current) {
+      const imageSrc = webcamRef.current.getScreenshot();
+      setImage(imageSrc);
+    }
+  }, [webcamRef]);
 
-    if (!coords || !image) {
-      setError("Lokasi dan Foto wajib ada!");
+  // 3. Fungsi Konversi Base64 ke File (Agar bisa diupload ke Multer)
+  const dataURLtoFile = (dataurl, filename) => {
+    if (!dataurl) return null;
+    let arr = dataurl.split(","),
+      mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]),
+      n = bstr.length,
+      u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
+  // 4. Submit Check-In
+  const handleCheckIn = async () => {
+    if (!image || !location) {
+      alert("Mohon ambil foto dan tunggu lokasi terdeteksi!");
       return;
     }
 
+    setLoading(true);
     try {
-      const blob = await (await fetch(image)).blob();
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Token tidak ditemukan, silakan login ulang.");
+        return;
+      }
+      
+      const file = dataURLtoFile(image, "foto-presensi.jpg");
 
       const formData = new FormData();
-      formData.append("latitude", coords.lat);
-      formData.append("longitude", coords.lng);
-      formData.append("image", blob, "selfie.jpg");
+      formData.append("image", file);
+      formData.append("latitude", location.lat);
+      formData.append("longitude", location.lng);
 
+      // Pastikan port sesuai dengan server.js (3001)
       const response = await axios.post(
         "http://localhost:3001/api/attendance/check-in",
-
         formData,
-        { headers: { Authorization: `Bearer ${getToken()}` } }
-
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
 
-      setMessage(response.data.message);
-    } catch (err) {
-      setError(err.response ? err.response.data.message : "Check-in gagal");
+      alert(`Sukses: ${response.data.message}`);
+      setImage(null); // Reset foto setelah berhasil
+    } catch (error) {
+      console.error("Check-in Error:", error);
+      const msg = error.response?.data?.message || error.message;
+      alert(`Gagal Check-in: ${msg}`);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // 5. Submit Check-Out (Tanpa Foto)
   const handleCheckOut = async () => {
-    setError("");
-    setMessage("");
+    if (!location) {
+      alert("Lokasi belum terdeteksi!");
+      return;
+    }
+    
+    setLoading(true);
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      };
-      const response = await axios.post(
+      const token = localStorage.getItem("token");
+      await axios.post(
         "http://localhost:3001/api/attendance/check-out",
-        {},
-        config
+        { latitude: location.lat, longitude: location.lng }, // Kirim lokasi saat check-out juga
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      setMessage(response.data.message);
-    } catch (err) {
-      setError(err.response ? err.response.data.message : "Check-out gagal");
+      alert("Check-out Berhasil!");
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Gagal Check-out";
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center pt-10 pb-10">
-      {isLoading ? (
-        <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-6xl mb-8 text-center">
-          <p className="text-xl font-semibold text-blue-600 animate-pulse">
-            Memuat Peta dan Mendeteksi Lokasi...
-          </p>
-          {error && <p className="text-red-600 mt-4">{error}</p>}
-        </div>
-      ) : (
-        <div className="bg-white p-4 rounded-lg shadow-md w-full mb-8 px-8 max-w-6xl">
-          <h3 className="text-xl font-semibold mb-2">Lokasi Terdeteksi:</h3>
-          <div className="my-4 border rounded-lg overflow-hidden">
-            <MapContainer
-              center={[coords.lat, coords.lng]}
-              zoom={15}
-              style={{ height: "300px", width: "100%" }}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker position={[coords.lat, coords.lng]}>
-                <Popup>Lokasi Presensi Anda</Popup>
-              </Marker>
-            </MapContainer>
-          </div>
-        </div>
-      )}
+    <div className="max-w-md mx-auto p-4 bg-white shadow-lg rounded-lg mt-10 mb-20">
+      <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">Presensi Harian</h2>
 
-
-      <div className="my-4 border rounded-lg overflow-hidden bg-black">
+      {/* --- BAGIAN KAMERA --- */}
+      <div className="mb-4 bg-gray-100 rounded-lg overflow-hidden relative border border-gray-300">
         {image ? (
-          <img src={image} alt="Selfie" className="w-full" />
+          <img src={image} alt="Preview" className="w-full h-64 object-cover" />
         ) : (
           <Webcam
             audio={false}
             ref={webcamRef}
             screenshotFormat="image/jpeg"
-            className="w-full"
+            className="w-full h-64 object-cover"
+            videoConstraints={{ facingMode: "user" }} // Kamera depan
           />
         )}
       </div>
 
-      <div className="mb-4">
+      <div className="flex gap-2 justify-center mb-6">
         {!image ? (
           <button
             onClick={capture}
-            className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition shadow-md"
           >
-            Ambil Foto
+            <Camera size={20} /> Ambil Foto
           </button>
         ) : (
           <button
             onClick={() => setImage(null)}
-            className="bg-gray-500 text-white px-4 py-2 rounded w-full"
+            className="bg-gray-500 text-white px-6 py-2 rounded-full hover:bg-gray-600 transition shadow-md"
           >
-            Foto Ulang
+            Ambil Ulang
           </button>
         )}
       </div>
 
-
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">
-          Lakukan Presensi
-        </h2>
-
-        {message && <p className="text-green-600 mb-4">{message}</p>}
-        {error && <p className="text-red-600 mb-4">{error}</p>}
-
-        <div className="flex space-x-4">
-          <button
-            onClick={handleCheckIn}
-            className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700"
+      {/* --- BAGIAN PETA (LEAFLET OSM) --- */}
+      <div className="mb-6 h-48 rounded-lg overflow-hidden border border-gray-300 shadow-inner relative z-0">
+        {location ? (
+          <MapContainer
+            center={[location.lat, location.lng]}
+            zoom={15}
+            style={{ height: "100%", width: "100%" }}
           >
-            Check-In
-          </button>
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+            />
+            <Marker position={[location.lat, location.lng]}>
+              <Popup>Lokasi Kamu Saat Ini</Popup>
+            </Marker>
+          </MapContainer>
+        ) : (
+          <div className="h-full flex items-center justify-center bg-gray-50 text-gray-500 flex-col gap-2">
+            <MapPin className="animate-bounce text-red-500" size={32} /> 
+            <span>Mencari Lokasi GPS...</span>
+          </div>
+        )}
+      </div>
 
-          <button
-            onClick={handleCheckOut}
-            className="w-full py-3 px-4 bg-red-600 text-white font-semibold rounded-md shadow-sm hover:bg-red-700"
-          >
-            Check-Out
-          </button>
-        </div>
+      {/* --- TOMBOL AKSI --- */}
+      <div className="flex gap-4">
+        <button
+          onClick={handleCheckIn}
+          disabled={loading || !location}
+          className="flex-1 flex justify-center items-center gap-2 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition shadow-lg"
+        >
+          {loading ? "Loading..." : <><CheckCircle size={20} /> Check In</>}
+        </button>
+        
+        <button
+          onClick={handleCheckOut}
+          disabled={loading || !location}
+          className="flex-1 flex justify-center items-center gap-2 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition shadow-lg"
+        >
+          <LogOut size={20} /> Check Out
+        </button>
       </div>
     </div>
   );
-}
+};
 
 export default AttendancePage;

@@ -1,156 +1,161 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Download, AlertCircle, MapPin, Image as ImageIcon } from "lucide-react";
 
-function ReportPage() {
-  const [reports, setReports] = useState([]);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const fetchReports = async (query) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const baseUrl = "http://localhost:3001/api/reports/daily";
-      const url = query ? `${baseUrl}?nama=${query}` : baseUrl;
-
-      const response = await axios.get(url, config);
-      setReports(response.data.data);
-      setError(null);
-    } catch (err) {
-      setReports([]);
-      setError(
-        err.response ? err.response.data.message : "Gagal mengambil data"
-      );
-    }
-  };
+const ReportPage = () => {
+  const [dataPresensi, setDataPresensi] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchReports("");
-  }, [navigate]);
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchReports(searchTerm);
+    fetchReport();
+  }, []);
+
+  const fetchReport = async () => {
+    setLoading(true);
+    setError(""); // Reset error sebelum fetch ulang
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token tidak ditemukan. Silakan login kembali.");
+      }
+
+      // Pastikan URL backend benar (port 3001)
+      const response = await axios.get("http://localhost:3001/api/attendance", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("Data diterima:", response.data); // Debugging di Console
+      setDataPresensi(response.data);
+    } catch (err) {
+      console.error("Error Detail:", err);
+      // Tampilkan pesan error yang spesifik dari server atau jaringan
+      const msg = err.response?.data?.message || err.message || "Gagal memuat data laporan.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    // Ganti backslash (\) jadi slash (/) jika ada (untuk support path Windows)
-    const cleanPath = path.replace(/\\/g, "/");
-    return `http://localhost:3001/${cleanPath}`;
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleDateString("id-ID", options);
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Laporan Presensi Harian
-      </h1>
-
-      <form onSubmit={handleSearchSubmit} className="mb-6 flex space-x-2">
-        <input
-          type="text"
-          placeholder="Cari berdasarkan nama..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        />
-        <button
-          type="submit"
-          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700"
+    <div className="max-w-6xl mx-auto p-6 bg-white shadow-lg rounded-lg mt-10 mb-20">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Laporan Presensi Pegawai</h2>
+        <button 
+          onClick={fetchReport}
+          className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700 transition"
         >
-          Cari
+          <Download size={18} /> Refresh Data
         </button>
-      </form>
+      </div>
 
-      {error && (
-        <p className="text-red-600 bg-red-100 p-4 rounded-md mb-4">{error}</p>
-      )}
-
-      {!error && (
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+      {loading ? (
+        <div className="text-center py-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-500">Memuat data...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3">
+          <AlertCircle size={24} />
+          <div>
+            <p className="font-bold">Terjadi Kesalahan</p>
+            <p className="text-sm">{error}</p>
+            <p className="text-xs mt-1 text-red-500">Tips: Pastikan server backend menyala dan Anda sudah menambahkan `router.get('/', ...)` di file routes/presensi.js</p>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full bg-white">
             <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nama
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check-In
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check-Out
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Latitude
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Longitude
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Bukti Foto
-                </th>
+              <tr className="text-gray-600 uppercase text-xs leading-normal">
+                <th className="py-3 px-6 text-left font-semibold">No</th>
+                <th className="py-3 px-6 text-left font-semibold">Nama User</th>
+                <th className="py-3 px-6 text-center font-semibold">Waktu Masuk</th>
+                <th className="py-3 px-6 text-center font-semibold">Waktu Pulang</th>
+                <th className="py-3 px-6 text-center font-semibold">Bukti Foto</th>
+                <th className="py-3 px-6 text-center font-semibold">Lokasi</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reports.length > 0 ? (
-                reports.map((presensi) => (
-                  <tr key={presensi.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {presensi.user ? presensi.user.nama : "N/A"}
+            <tbody className="text-gray-600 text-sm font-light">
+              {dataPresensi.length > 0 ? (
+                dataPresensi.map((item, index) => (
+                  <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                    <td className="py-3 px-6 text-left whitespace-nowrap font-medium">
+                      {index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(presensi.checkIn).toLocaleString("id-ID", {
-                        timeZone: "Asia/Jakarta",
-                      })}
+                    <td className="py-3 px-6 text-left">
+                      <div className="flex items-center">
+                        <div className="mr-2">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                            {item.User?.username?.charAt(0).toUpperCase() || "U"}
+                          </div>
+                        </div>
+                        <span className="font-medium">
+                          {item.User ? (item.User.nama || item.User.username) : "User Tidak Dikenal"}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.checkOut
-                        ? new Date(presensi.checkOut).toLocaleString("id-ID", {
-                            timeZone: "Asia/Jakarta",
-                          })
-                        : "Belum Check-Out"}
+                    <td className="py-3 px-6 text-center">
+                      <span className="bg-green-100 text-green-700 py-1 px-3 rounded-full text-xs font-semibold">
+                        {formatDate(item.checkIn)}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.latitude || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.longitude || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.buktiFoto ? (
-                        <img
-                          src={getImageUrl(presensi.buktiFoto)}
-                          alt="Bukti"
-                          className="h-10 w-10 rounded-full object-cover cursor-pointer border hover:border-blue-500"
-                          onClick={() =>
-                            setSelectedImage(getImageUrl(presensi.buktiFoto))
-                          }
-                        />
+                    <td className="py-3 px-6 text-center">
+                      {item.checkOut ? (
+                         <span className="bg-blue-100 text-blue-700 py-1 px-3 rounded-full text-xs font-semibold">
+                           {formatDate(item.checkOut)}
+                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">Tidak ada</span>
+                        <span className="bg-yellow-100 text-yellow-700 py-1 px-3 rounded-full text-xs font-semibold animate-pulse">
+                          Belum Check-Out
+                        </span>
                       )}
+                    </td>
+                    <td className="py-3 px-6 text-center">
+                      {item.buktiFoto ? (
+                        <a 
+                          href={`http://localhost:3001/${item.buktiFoto.replace(/\\/g, "/")}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-500 hover:text-blue-700 font-medium underline decoration-dotted"
+                        >
+                          <ImageIcon size={14} /> Lihat
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-6 text-center">
+                      {item.latitude && item.longitude ? (
+                        <a 
+                          href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-500 hover:text-blue-700 font-medium"
+                        >
+                          <MapPin size={14} /> Maps
+                        </a>
+                      ) : <span className="text-gray-400">-</span>}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan="3"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    Tidak ada data yang ditemukan.
+                  <td colSpan="6" className="text-center py-8 text-gray-500">
+                    Belum ada data presensi yang terekam.
                   </td>
                 </tr>
               )}
@@ -158,30 +163,8 @@ function ReportPage() {
           </table>
         </div>
       )}
-
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedImage(null)} // Klik di luar foto untuk tutup
-        >
-          <div className="relative max-w-3xl w-full">
-            <button
-              className="absolute -top-10 right-0 text-white text-xl font-bold hover:text-gray-300"
-              onClick={() => setSelectedImage(null)}
-            >
-              Tutup [X]
-            </button>
-            <img
-              src={selectedImage}
-              alt="Bukti Full"
-              className="w-full h-auto rounded-lg shadow-2xl border-2 border-white"
-              onClick={(e) => e.stopPropagation()} // Mencegah klik foto menutup modal
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
-}
+};
 
 export default ReportPage;
