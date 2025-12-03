@@ -97,14 +97,14 @@ const CheckOut = async (req, res) => {
 };
 
 // --- GET ALL PRESENSI (REPORT) ---
-// PERBAIKAN DISINI: Menambahkan "as: 'user'" agar cocok dengan model
+// PERBAIKAN: Mengganti 'username' menjadi 'nama' sesuai database Anda
 const getAllPresensi = async (req, res) => {
   try {
     const data = await Presensi.findAll({
       include: [{ 
         model: User, 
-        as: 'user', // <--- INI KUNCINYA
-        attributes: ['username', 'email'] // Ambil kolom tertentu saja
+        as: 'user', 
+        attributes: ['nama', 'email'] // <--- DIGANTI: 'username' jadi 'nama'
       }], 
       order: [['checkIn', 'DESC']]
     });

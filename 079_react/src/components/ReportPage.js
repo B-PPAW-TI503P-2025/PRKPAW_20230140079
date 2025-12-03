@@ -13,23 +13,21 @@ const ReportPage = () => {
 
   const fetchReport = async () => {
     setLoading(true);
-    setError(""); // Reset error sebelum fetch ulang
+    setError(""); 
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Token tidak ditemukan. Silakan login kembali.");
       }
 
-      // Pastikan URL backend benar (port 3001)
       const response = await axios.get("http://localhost:3001/api/attendance", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("Data diterima:", response.data); // Debugging di Console
+      console.log("Data diterima:", response.data); 
       setDataPresensi(response.data);
     } catch (err) {
       console.error("Error Detail:", err);
-      // Tampilkan pesan error yang spesifik dari server atau jaringan
       const msg = err.response?.data?.message || err.message || "Gagal memuat data laporan.";
       setError(msg);
     } finally {
@@ -73,7 +71,6 @@ const ReportPage = () => {
           <div>
             <p className="font-bold">Terjadi Kesalahan</p>
             <p className="text-sm">{error}</p>
-            <p className="text-xs mt-1 text-red-500">Tips: Pastikan server backend menyala dan Anda sudah menambahkan `router.get('/', ...)` di file routes/presensi.js</p>
           </div>
         </div>
       ) : (
@@ -99,12 +96,14 @@ const ReportPage = () => {
                     <td className="py-3 px-6 text-left">
                       <div className="flex items-center">
                         <div className="mr-2">
-                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                            {item.User?.username?.charAt(0).toUpperCase() || "U"}
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold uppercase">
+                            {/* PERBAIKAN: Menggunakan item.user (kecil) */}
+                            {item.user?.nama?.charAt(0) || "U"}
                           </div>
                         </div>
                         <span className="font-medium">
-                          {item.User ? (item.User.nama || item.User.username) : "User Tidak Dikenal"}
+                          {/* PERBAIKAN: Menggunakan item.user (kecil) */}
+                          {item.user ? (item.user.nama || item.user.username) : "User Tidak Dikenal"}
                         </span>
                       </div>
                     </td>
