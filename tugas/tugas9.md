@@ -6,13 +6,13 @@
 ---
 
 ## 2. Tampilan halaman presensi dengan menampilkan maps OSM saat check in dan check out
-![CI MAP](../screenshots/ci-map.png)
-![CO MAP](../screenshots/co-map.png)
+![CI MAP](../screenshots/newcimap.png)
+![CO MAP](../screenshots/newcomap.png)
 
 ---
 
 ## 3. Tampilan halaman report yg berisi data presensi dari semua user
-![Report](../screenshots/fullreport.png)
+![Report](../screenshots/newreport.png)
 
 ---
 
