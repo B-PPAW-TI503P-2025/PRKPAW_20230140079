@@ -6,8 +6,8 @@
 ---
 
 ## 2. Tampilan halaman presensi dengan menampilkan maps OSM saat check in dan check out
-![CI MAP](../screenshots/cimap.png)
-![CO MAP](../screenshots/comap.png)
+![CI MAP](../screenshots/ci-map.png)
+![CO MAP](../screenshots/co-map.png)
 
 ---
 
