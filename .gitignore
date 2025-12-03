@@ -1,0 +1,61 @@
+# -------------------------
+# Node.js (Backend & Frontend)
+# -------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+log.txt
+
+# Build output
+dist/
+build/
+
+# Cache
+.cache/
+.tmp/
+temp/
+
+node_modules/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# React specific
+**/node_modules/
+**/build/
+**/dist/
+
+# Testing
+coverage/
+*.tsbuildinfo
+
+# Database (if using SQLite or similar)
+*.sqlite
+*.sqlite-journal
+
+# PM2 logs (if using PM2)
+.pm2/
+
+# Misc
+*.pid
+*.seed
+*.tgz
