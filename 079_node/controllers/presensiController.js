@@ -34,13 +34,24 @@ const CheckIn = async (req, res) => {
     const userId = req.user.id;
     const userName = req.user.nama || req.user.username || "User"; 
     const waktuSekarang = new Date();
-    const { latitude, longitude } = req.body;
-    const buktiFoto = req.file ? req.file.path : null;
 
-    if (!buktiFoto) {
+    const { latitude, longitude } = req.body;
+    let buktiFoto = null;
+
+    // --- LOGIKA UTAMA DISINI ---
+    if (req.file) {
+        // KASUS 1: Ada file yang diupload (Normal dari Web / Postman Form-Data)
+        buktiFoto = req.file.path;
+    } else if (req.is('application/json')) {
+        // KASUS 2: Request via RAW JSON (Postman Test)
+        // Kita izinkan lewat, tapi fotonya kita kasih tanda khusus
+        buktiFoto = "no-image (via json test)";
+    } else {
+        // KASUS 3: Request Web tapi tidak ada foto (Error)
         return res.status(400).json({ message: "Foto bukti wajib diupload!" });
     }
 
+    // Cek Data Ganda (Double Check-in)
     const existingRecord = await Presensi.findOne({
       where: { userId: userId, checkOut: null },
     });
@@ -49,18 +60,20 @@ const CheckIn = async (req, res) => {
       return res.status(400).json({ message: "Anda sudah check-in hari ini." });
     }
 
+    // Simpan Data
     const newRecord = await Presensi.create({
       userId: userId,
       checkIn: waktuSekarang,
       latitude: latitude || null,
       longitude: longitude || null,
-      buktiFoto: buktiFoto,
+      buktiFoto: buktiFoto, // Bisa berisi path file atau string placeholder
     });
 
     res.status(201).json({
       message: `Halo ${userName}, check-in berhasil pukul ${format(waktuSekarang, "HH:mm:ss", { timeZone })} WIB`,
       data: newRecord,
     });
+
   } catch (error) {
     console.error("Error CheckIn:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
