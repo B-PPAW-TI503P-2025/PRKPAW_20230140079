@@ -80,12 +80,18 @@ exports.login = async (req, res) => {
 
     // 4. Buat dan tandatangani JWT
     const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: "1h", // Token akan kedaluwarsa dalam 1 jam
+      expiresIn: "1h", 
     });
 
     res.json({
       message: "Login berhasil",
-      token: token, // Kirim token ke klien
+      token: token,
+      user: {
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        role: user.role, 
+      }
     });
   } catch (error) {
     res

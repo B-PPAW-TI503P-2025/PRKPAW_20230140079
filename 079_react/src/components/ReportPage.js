@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Download, AlertCircle, MapPin, Image as ImageIcon, Search } from "lucide-react";
+import { Download, AlertCircle, MapPin } from "lucide-react";
 
 const ReportPage = () => {
   const [dataPresensi, setDataPresensi] = useState([]);
@@ -8,6 +8,17 @@ const ReportPage = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // LOGIKA PERLINDUNGAN HALAMAN
+    // Cek apakah user admin sebelum mencoba mengambil data
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+
+    if (!user || user.role !== "admin") {
+      setError("AKSES DITOLAK: Halaman ini khusus Administrator.");
+      setLoading(false);
+      return; // Berhenti di sini, jangan lanjut fetch
+    }
+
     fetchReport();
   }, []);
 
@@ -23,6 +34,7 @@ const ReportPage = () => {
       });
       setDataPresensi(response.data);
     } catch (err) {
+      // Menangkap pesan error dari server (misal 403 Forbidden)
       const msg = err.response?.data?.message || err.message || "Gagal memuat data.";
       setError(msg);
     } finally {
@@ -69,6 +81,10 @@ const ReportPage = () => {
               <div>
                 <p className="font-extrabold text-lg">Gagal Memuat Laporan</p>
                 <p>{error}</p>
+                {/* Tambahan pesan user friendly jika akses ditolak */}
+                {error.includes("AKSES DITOLAK") && (
+                   <p className="text-sm mt-1 text-red-600">Silakan login menggunakan akun admin untuk melihat data ini.</p>
+                )}
               </div>
             </div>
           ) : (
@@ -118,7 +134,7 @@ const ReportPage = () => {
                         <td className="py-4 px-6 text-center">
                            {item.latitude ? (
                              <a 
-                               href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
+                               href={`http://maps.google.com/maps?q=${item.latitude},${item.longitude}`}
                                target="_blank" 
                                rel="noopener noreferrer"
                                className="inline-flex items-center gap-1.5 text-pink-500 hover:text-pink-700 font-bold text-sm transition-colors bg-pink-50 px-3 py-1.5 rounded-lg"

@@ -1,13 +1,18 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, LayoutDashboard, UserCheck, FileText, User } from "lucide-react";
+import { LogOut, LayoutDashboard, UserCheck, FileText } from "lucide-react";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  
+  // AMBIL DATA USER DARI LOCALSTORAGE
+  const userString = localStorage.getItem("user");
+  const user = userString ? JSON.parse(userString) : null;
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user"); // Hapus data user juga saat logout
     navigate("/login");
   };
 
@@ -35,9 +40,13 @@ const Navbar = () => {
               <Link to="/attendance" className="hidden md:flex items-center gap-2 text-gray-500 font-bold hover:text-pink-500 transition-colors">
                 <UserCheck size={18} /> Presensi
               </Link>
-              <Link to="/report" className="hidden md:flex items-center gap-2 text-gray-500 font-bold hover:text-orange-500 transition-colors">
-                <FileText size={18} /> Laporan
-              </Link>
+              
+              {/* LOGIKA ADMIN: Menu Laporan hanya muncul jika role === 'admin' */}
+              {user && user.role === "admin" && (
+                <Link to="/report" className="hidden md:flex items-center gap-2 text-gray-500 font-bold hover:text-orange-500 transition-colors">
+                  <FileText size={18} /> Laporan
+                </Link>
+              )}
               
               <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
 

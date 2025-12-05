@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 const presensiController = require("../controllers/presensiController");
 const { authenticateToken } = require("../middleware/permissionMiddleware");
+const { authenticateToken, isAdmin } = require("../middleware/permissionMiddleware");
 
 router.use(authenticateToken);
 
-// --- TAMBAHKAN BAGIAN INI AGAR REPORT BISA DIBUKA ---
-// Ini membuka pintu untuk React mengambil data (GET /api/attendance)
-router.get("/", presensiController.getAllPresensi); 
+router.get("/", presensiController.getAllPresensi);
+router.get("/", isAdmin, presensiController.getAllPresensi); 
 
 router.post(
   "/check-in",
