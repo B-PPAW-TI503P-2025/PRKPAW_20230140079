@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Download, AlertCircle, MapPin } from "lucide-react";
+import { Download, AlertCircle, MapPin, Image as ImageIcon, X } from "lucide-react";
 
 const ReportPage = () => {
   const [dataPresensi, setDataPresensi] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // STATE BARU: Untuk menyimpan URL gambar yang sedang dibuka di pop-up
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    // LOGIKA PERLINDUNGAN HALAMAN
-    // Cek apakah user admin sebelum mencoba mengambil data
+    // Cek Role Admin
     const userString = localStorage.getItem("user");
     const user = userString ? JSON.parse(userString) : null;
 
     if (!user || user.role !== "admin") {
       setError("AKSES DITOLAK: Halaman ini khusus Administrator.");
       setLoading(false);
-      return; // Berhenti di sini, jangan lanjut fetch
+      return; 
     }
 
     fetchReport();
@@ -34,7 +36,6 @@ const ReportPage = () => {
       });
       setDataPresensi(response.data);
     } catch (err) {
-      // Menangkap pesan error dari server (misal 403 Forbidden)
       const msg = err.response?.data?.message || err.message || "Gagal memuat data.";
       setError(msg);
     } finally {
@@ -49,9 +50,17 @@ const ReportPage = () => {
     });
   };
 
+  // HELPER BARU: Mengubah path file server menjadi URL browser yang valid
+  const getImageUrl = (path) => {
+    if (!path || path.includes("no-image")) return null;
+    // Ganti backslash (\) menjadi forward slash (/) untuk kompatibilitas Windows
+    const cleanPath = path.replace(/\\/g, "/");
+    return `http://localhost:3001/${cleanPath}`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 p-6">
-      <div className="max-w-6xl mx-auto mt-6 bg-white rounded-3xl shadow-xl border border-white overflow-hidden">
+      <div className="max-w-7xl mx-auto mt-6 bg-white rounded-3xl shadow-xl border border-white overflow-hidden relative">
         
         {/* HEADER */}
         <div className="bg-gradient-to-r from-orange-400 to-pink-500 p-8 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -81,9 +90,8 @@ const ReportPage = () => {
               <div>
                 <p className="font-extrabold text-lg">Gagal Memuat Laporan</p>
                 <p>{error}</p>
-                {/* Tambahan pesan user friendly jika akses ditolak */}
                 {error.includes("AKSES DITOLAK") && (
-                   <p className="text-sm mt-1 text-red-600">Silakan login menggunakan akun admin untuk melihat data ini.</p>
+                   <p className="text-sm mt-1 text-red-600">Silakan login menggunakan akun admin.</p>
                 )}
               </div>
             </div>
@@ -94,8 +102,10 @@ const ReportPage = () => {
                   <tr className="bg-gray-50 border-b border-gray-200 text-left">
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider">No</th>
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider">Pegawai</th>
-                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Masuk</th>
-                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Pulang</th>
+                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Check-In</th>
+                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Check-Out</th>
+                    {/* KOLOM BARU */}
+                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Foto</th>
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Lokasi</th>
                   </tr>
                 </thead>
@@ -131,10 +141,25 @@ const ReportPage = () => {
                             </span>
                           )}
                         </td>
+                        
+                        {/* BUTTON LIHAT FOTO */}
+                        <td className="py-4 px-6 text-center">
+                          {getImageUrl(item.buktiFoto) ? (
+                            <button
+                              onClick={() => setSelectedImage(getImageUrl(item.buktiFoto))}
+                              className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-purple-500 hover:text-white transition-all shadow-sm border border-purple-100"
+                            >
+                              <ImageIcon size={14} /> Lihat
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">No Image</span>
+                          )}
+                        </td>
+
                         <td className="py-4 px-6 text-center">
                            {item.latitude ? (
                              <a 
-                               href={`http://maps.google.com/maps?q=${item.latitude},${item.longitude}`}
+                               href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
                                target="_blank" 
                                rel="noopener noreferrer"
                                className="inline-flex items-center gap-1.5 text-pink-500 hover:text-pink-700 font-bold text-sm transition-colors bg-pink-50 px-3 py-1.5 rounded-lg"
@@ -147,7 +172,7 @@ const ReportPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-12 text-gray-400 font-medium">
+                      <td colSpan="6" className="text-center py-12 text-gray-400 font-medium">
                         Belum ada data presensi hari ini.
                       </td>
                     </tr>
@@ -157,6 +182,36 @@ const ReportPage = () => {
             </div>
           )}
         </div>
+
+        {/* --- MODAL POP-UP FOTO --- */}
+        {selectedImage && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-all animate-in fade-in duration-200">
+            <div className="relative bg-white p-2 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+              
+              {/* Tombol Close */}
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-4 -right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-transform hover:scale-110 z-10"
+              >
+                <X size={24} />
+              </button>
+
+              {/* Gambar */}
+              <div className="overflow-hidden rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center h-full">
+                <img 
+                  src={selectedImage} 
+                  alt="Bukti Check-In" 
+                  className="w-full h-full object-contain max-h-[80vh]"
+                />
+              </div>
+              
+              <div className="mt-3 text-center">
+                <p className="text-sm text-gray-500 font-medium">Bukti Foto Presensi</p>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

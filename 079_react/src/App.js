@@ -1,58 +1,76 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import DashboardPage from "./components/DashboardPage";
 import AttendancePage from "./components/AttendancePage";
-import ReportPage from "./components/ReportPage";
+import ReportPage from "./components/ReportPage"; // Pastikan sudah di-import
 import Navbar from "./components/Navbar";
-import "leaflet/dist/leaflet.css";
 
-const MainLayout = ({ children }) => {
+// Komponen Layout agar Navbar otomatis muncul di halaman tertentu
+const Layout = ({ children }) => {
+  const location = useLocation();
+  // Daftar path yang TIDAK boleh ada Navbar (Login & Register)
+  const hideNavbarPaths = ["/login", "/register", "/"];
+
+  const showNavbar = !hideNavbarPaths.includes(location.pathname);
+
   return (
-    <div>
-      <Navbar />
-      <main>{children}</main>
-    </div>
+    <>
+      {showNavbar && <Navbar />}
+      {children}
+    </>
   );
+};
+
+// Komponen PrivateRoute untuk memproteksi halaman
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+  // Jika tidak ada token, tendang ke login
+  return token ? children : <Navigate to="/login" />;
 };
 
 function App() {
   return (
     <Router>
-      <div>
+      <Layout>
         <Routes>
+          {/* Rute Publik */}
+          <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+
+          {/* Rute Private (Butuh Login) */}
           <Route
             path="/dashboard"
             element={
-              <MainLayout>
+              <PrivateRoute>
                 <DashboardPage />
-              </MainLayout>
+              </PrivateRoute>
             }
           />
           <Route
             path="/attendance"
             element={
-              <MainLayout>
+              <PrivateRoute>
                 <AttendancePage />
-              </MainLayout>
+              </PrivateRoute>
             }
           />
+          
+          {/* PASTIKAN RUTE LAPORAN ADA DI SINI */}
           <Route
-            path="/reports"
+            path="/report"
             element={
-              <MainLayout>
+              <PrivateRoute>
                 <ReportPage />
-              </MainLayout>
+              </PrivateRoute>
             }
           />
-          <Route path="/report" element={<ReportPage />} />
-          <Route path="/" element={<LoginPage />} />
         </Routes>
-      </div>
+      </Layout>
     </Router>
   );
 }
+
 export default App;

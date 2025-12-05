@@ -6,13 +6,18 @@ const Navbar = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   
-  // AMBIL DATA USER DARI LOCALSTORAGE
   const userString = localStorage.getItem("user");
   const user = userString ? JSON.parse(userString) : null;
 
+  // --- UPDATE LOGIC LOGOUT DI SINI ---
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user"); // Hapus data user juga saat logout
+    localStorage.removeItem("user");
+    
+    // TAMBAHAN PENTING:
+    // Hapus status presensi harian saat logout agar bisa tes ulang
+    localStorage.removeItem("attendanceStatus"); 
+    
     navigate("/login");
   };
 
@@ -21,7 +26,6 @@ const Navbar = () => {
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           
-          {/* LOGO GRADIENT */}
           <Link to="/dashboard" className="flex items-center gap-2 group">
             <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-2 rounded-xl text-white shadow-lg group-hover:shadow-orange-200 transition-all">
                <UserCheck size={24} strokeWidth={3} />
@@ -31,7 +35,6 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* MENU ITEMS (Hanya tampil jika login) */}
           {token && (
             <div className="flex items-center gap-6">
               <Link to="/dashboard" className="hidden md:flex items-center gap-2 text-gray-500 font-bold hover:text-orange-500 transition-colors">
@@ -41,7 +44,6 @@ const Navbar = () => {
                 <UserCheck size={18} /> Presensi
               </Link>
               
-              {/* LOGIKA ADMIN: Menu Laporan hanya muncul jika role === 'admin' */}
               {user && user.role === "admin" && (
                 <Link to="/report" className="hidden md:flex items-center gap-2 text-gray-500 font-bold hover:text-orange-500 transition-colors">
                   <FileText size={18} /> Laporan
