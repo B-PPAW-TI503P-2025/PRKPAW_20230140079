@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Download, AlertCircle, MapPin, Image as ImageIcon, X } from "lucide-react";
+import { Download, AlertCircle, MapPin, X, ImageOff } from "lucide-react"; // Tambahkan icon ImageOff
 
 const ReportPage = () => {
   const [dataPresensi, setDataPresensi] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  // STATE BARU: Untuk menyimpan URL gambar yang sedang dibuka di pop-up
+  // STATE POPUP GAMBAR
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
@@ -50,10 +50,9 @@ const ReportPage = () => {
     });
   };
 
-  // HELPER BARU: Mengubah path file server menjadi URL browser yang valid
+  // HELPER URL GAMBAR
   const getImageUrl = (path) => {
     if (!path || path.includes("no-image")) return null;
-    // Ganti backslash (\) menjadi forward slash (/) untuk kompatibilitas Windows
     const cleanPath = path.replace(/\\/g, "/");
     return `http://localhost:3001/${cleanPath}`;
   };
@@ -104,8 +103,8 @@ const ReportPage = () => {
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider">Pegawai</th>
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Check-In</th>
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Check-Out</th>
-                    {/* KOLOM BARU */}
-                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Foto</th>
+                    {/* KOLOM FOTO */}
+                    <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Bukti Foto</th>
                     <th className="py-4 px-6 font-extrabold text-gray-600 uppercase text-xs tracking-wider text-center">Lokasi</th>
                   </tr>
                 </thead>
@@ -142,17 +141,26 @@ const ReportPage = () => {
                           )}
                         </td>
                         
-                        {/* BUTTON LIHAT FOTO */}
+                        {/* --- IMPLEMENTASI TUGAS: THUMBNAIL FOTO --- */}
                         <td className="py-4 px-6 text-center">
                           {getImageUrl(item.buktiFoto) ? (
-                            <button
-                              onClick={() => setSelectedImage(getImageUrl(item.buktiFoto))}
-                              className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-purple-500 hover:text-white transition-all shadow-sm border border-purple-100"
-                            >
-                              <ImageIcon size={14} /> Lihat
-                            </button>
+                            <div className="relative group flex justify-center">
+                              <img 
+                                src={getImageUrl(item.buktiFoto)}
+                                alt="Thumbnail"
+                                className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer hover:scale-110 transition-transform hover:border-pink-400"
+                                onClick={() => setSelectedImage(getImageUrl(item.buktiFoto))}
+                              />
+                              {/* Tooltip Hover */}
+                              <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                                Klik untuk memperbesar
+                              </div>
+                            </div>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">No Image</span>
+                            <div className="flex flex-col items-center justify-center text-gray-300">
+                               <ImageOff size={20} />
+                               <span className="text-[10px] italic mt-1">No Image</span>
+                            </div>
                           )}
                         </td>
 
@@ -183,31 +191,33 @@ const ReportPage = () => {
           )}
         </div>
 
-        {/* --- MODAL POP-UP FOTO --- */}
+        {/* --- MODAL POP-UP (FULL SIZE) --- */}
         {selectedImage && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-all animate-in fade-in duration-200">
-            <div className="relative bg-white p-2 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 transition-all animate-in fade-in duration-200"
+               onClick={() => setSelectedImage(null)} // Klik background untuk tutup
+          >
+            <div className="relative bg-transparent max-w-4xl w-full max-h-[95vh] flex flex-col items-center" 
+                 onClick={e => e.stopPropagation()} // Supaya klik gambar tidak menutup modal
+            >
               
               {/* Tombol Close */}
               <button 
                 onClick={() => setSelectedImage(null)}
-                className="absolute -top-4 -right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-transform hover:scale-110 z-10"
+                className="absolute -top-12 right-0 md:-right-12 bg-white/20 text-white p-2 rounded-full hover:bg-white/40 transition-all"
               >
-                <X size={24} />
+                <X size={32} />
               </button>
 
-              {/* Gambar */}
-              <div className="overflow-hidden rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center h-full">
-                <img 
-                  src={selectedImage} 
-                  alt="Bukti Check-In" 
-                  className="w-full h-full object-contain max-h-[80vh]"
-                />
-              </div>
+              {/* Gambar Full Size */}
+              <img 
+                src={selectedImage} 
+                alt="Bukti Check-In Full" 
+                className="w-full h-full object-contain rounded-lg shadow-2xl border-4 border-white/10"
+              />
               
-              <div className="mt-3 text-center">
-                <p className="text-sm text-gray-500 font-medium">Bukti Foto Presensi</p>
-              </div>
+              <p className="mt-4 text-white/80 font-medium text-center">
+                Bukti Foto Presensi
+              </p>
             </div>
           </div>
         )}
